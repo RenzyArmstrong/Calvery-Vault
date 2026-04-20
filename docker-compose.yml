@@ -1,0 +1,45 @@
+# Calvery Vault (CVSM) — self-host dengan Docker Compose.
+# Image pre-built dari GitHub Container Registry.
+#
+# Quick start:
+#   cp .env.example .env
+#   nano .env   # isi JWT_SECRET, ENCRYPTION_KEY, DB_PASSWORD
+#   docker compose up -d
+#
+# Manage via CLI: https://github.com/RenzyArmstrong/Calvery-Vault/releases
+# Upgrade: ganti :latest ke tag spesifik (:v1.2.3) untuk stabil.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cvsm-postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cvsm}
+      POSTGRES_USER: ${DB_USER:-cvsm}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cvsm}
+    volumes:
+      - cvsm_postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cvsm} -d ${DB_NAME:-cvsm}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    image: ghcr.io/renzyarmstrong/cvsm-api:latest
+    container_name: cvsm-api
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file: .env
+    ports:
+      # Bind ke 127.0.0.1 saja — pasang reverse proxy (nginx/caddy) untuk TLS.
+      - "127.0.0.1:${PORT:-8080}:${PORT:-8080}"
+
+volumes:
+  cvsm_postgres_data:

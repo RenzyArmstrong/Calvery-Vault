@@ -1,0 +1,108 @@
+# Calvery Vault — example Nginx config
+# Ganti "yourdomain.com" dengan domain kamu.
+# Ganti 127.0.0.1:8080 sesuai alamat API container/service.
+#
+# Untuk production di belakang Cloudflare, aktifkan allowlist IP CF
+# (comment `deny all` dan `allow` sesuai https://www.cloudflare.com/ips/).
+
+# ── DEFAULT: drop request tanpa Host valid (akses via IP) ─────
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return 444;
+}
+
+# ── api.yourdomain.com → CVSM API (127.0.0.1:8080) ───────────
+server {
+    listen 80;
+    server_name api.yourdomain.com;
+
+    # Uncomment di production di belakang Cloudflare:
+    # include /etc/nginx/cloudflare-ips.conf;
+    # deny all;
+
+    client_max_body_size 2m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $http_cf_connecting_ip;
+        proxy_set_header X-Forwarded-For $http_cf_connecting_ip;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_read_timeout 30s;
+        proxy_connect_timeout 5s;
+    }
+}
+
+# ── yourdomain.com → React SPA (landing + auth) ──────────────
+server {
+    listen 80;
+    server_name yourdomain.com www.yourdomain.com;
+
+    root /var/www/yourdomain.com;
+    index index.html;
+
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    location ~* \.(js|css|woff2?|ttf|otf|eot|svg|png|jpg|jpeg|gif|ico|webp|avif)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location / {
+        try_files $uri /index.html;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+
+    gzip on;
+    gzip_comp_level 6;
+    gzip_types text/html text/css application/javascript application/json image/svg+xml;
+}
+
+# ── dash.yourdomain.com → React SPA (dashboard, sama build) ──
+server {
+    listen 80;
+    server_name dash.yourdomain.com;
+
+    root /var/www/dash.yourdomain.com;
+    index index.html;
+
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+
+    location ~* \.(js|css|woff2?|ttf|otf|eot|svg|png|jpg|jpeg|gif|ico|webp|avif)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location / {
+        try_files $uri /index.html;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+
+    gzip on;
+    gzip_comp_level 6;
+    gzip_types text/html text/css application/javascript application/json image/svg+xml;
+}
+
+# ── docs.yourdomain.com → Dokumentasi (static HTML) ──────────
+server {
+    listen 80;
+    server_name docs.yourdomain.com;
+
+    root /var/www/docs.yourdomain.com;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    gzip on;
+    gzip_types text/html text/css application/javascript;
+}
