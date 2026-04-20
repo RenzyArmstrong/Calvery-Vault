@@ -50,7 +50,15 @@ curl http://localhost:8080/health
 # → {"status":"ok"}
 ```
 
-### Opsi C — Linux native (systemd)
+### Opsi C — **Interactive installer** (termudah)
+
+Prompt domain, email admin, pilih Docker/systemd, auto-generate JWT+ENC keys, sekaligus buat akun admin. 2 menit selesai.
+
+```bash
+curl -sL https://raw.githubusercontent.com/RenzyArmstrong/Calvery-Vault/master/scripts/server-install.sh | sudo bash
+```
+
+### Opsi D — Linux native (systemd manual)
 
 ```bash
 curl -sL https://raw.githubusercontent.com/RenzyArmstrong/Calvery-Vault/master/deploy/systemd/install.sh | sudo bash

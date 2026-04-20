@@ -4,7 +4,7 @@
 
 set -e
 
-REPO="RenzyArmstrong/secrets-manager"
+REPO="RenzyArmstrong/Calvery-Vault"
 VERSION="${1:-latest}"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 
